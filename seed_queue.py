@@ -57,6 +57,10 @@ def main() -> int:
                         "une captation vidéo (4 = ~4x plus rapide)")
     p.add_argument("--delay", type=float, default=0.0, metavar="S",
                    help="pause entre deux envois, pour cadencer la démo")
+    p.add_argument("--fresh-ids", action="store_true",
+                   help="identifiants uniques sans vider la file : permet de "
+                        "rejouer un cas pour obtenir une nouvelle génération "
+                        "(utile sur les cas adverses, dont le résultat varie)")
     args = p.parse_args()
 
     if args.reset:
@@ -93,7 +97,7 @@ def main() -> int:
     # Le cache d'idempotence de l'API mémorise les message_id pendant 1 h et
     # renvoie la réponse en cache sans re-remplir la file. Après un --reset on
     # suffixe donc les identifiants, sinon la deuxième prise resterait vide.
-    suffixe = f"-{int(time.time())}" if args.reset else ""
+    suffixe = f"-{int(time.time())}" if (args.reset or args.fresh_ids) else ""
 
     def payload_for(item: dict) -> dict:
         return {
