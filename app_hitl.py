@@ -23,9 +23,11 @@ certains postes Windows. Tableaux et graphiques sont rendus en HTML/CSS.
 import html
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 import streamlit as st
 
+import demo_mode
 import rules
 import runtime_config
 import store
@@ -147,6 +149,23 @@ CSS = """
 st.markdown(CSS, unsafe_allow_html=True)
 
 
+# ─── Mode démo publique ─────────────────────────────────────────────────
+# Chaque visiteur reçoit sa propre copie de la file, reconstruite depuis une
+# fixture versionnée : ses validations n'affectent personne d'autre, et aucun
+# appel LLM n'est déclenché. Doit être exécuté AVANT toute lecture du store.
+DEMO = demo_mode.is_demo()
+if DEMO:
+    if "demo_sid" not in st.session_state:
+        st.session_state.demo_sid = uuid4().hex
+        demo_mode.purger_anciennes()
+    if demo_mode.preparer_session(st.session_state.demo_sid) is None:
+        st.error(
+            "Mode démo activé mais `demo/demo_fixture.json` est introuvable.\n\n"
+            "Générez-la en local : `python seed_queue.py --reset` puis "
+            "`python demo/export_fixture.py`, et committez le fichier.")
+        st.stop()
+
+
 # ─── Helpers de rendu (sans pandas) ─────────────────────────────────────
 def _json(value, default):
     import json
@@ -202,7 +221,30 @@ def html_table(rows: list, renderers=None) -> str:
 
 
 # ─── Barre latérale : agent, filtres, réglages ──────────────────────────
+if DEMO:
+    _fx = demo_mode.info_fixture()
+    st.markdown(
+        f'<div class="im-reason" style="--c:{ORANGE}">'
+        f'<div class="t">🎭 Démonstration — données fictives</div>'
+        f'<div class="w">Ces e-mails sont un jeu de test synthétique : aucun '
+        f'client réel, aucune donnée personnelle authentique. Vous disposez de '
+        f'votre propre copie de la file — validez, corrigez, rejetez librement, '
+        f'personne d\'autre n\'est affecté.</div>'
+        f'<div class="w">Aucun appel au modèle n\'est déclenché : les '
+        f'brouillons et les décisions d\'escalade ont été calculés à l\'avance '
+        f'par le pipeline{" le " + _fx["genere_le"][:10] if _fx.get("genere_le") else ""}.'
+        f'</div></div>', unsafe_allow_html=True)
+
 with st.sidebar:
+    if DEMO:
+        st.markdown("### 🎭 Démonstration")
+        if st.button("↺ Réinitialiser ma file", use_container_width=True,
+                     help="Restaure les cas d'origine. N'affecte que vous."):
+            demo_mode.reinitialiser(st.session_state.demo_sid)
+            st.rerun()
+        st.caption("Code source : github.com/abdelhak-saket/intellimail")
+        st.divider()
+
     st.markdown("### 👤 Agent")
     st.text_input("Votre identifiant", key="agent_name", placeholder="prenom.nom",
                   label_visibility="collapsed",

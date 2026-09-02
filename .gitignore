@@ -21,6 +21,10 @@ metrics/
 runtime_config.json
 .langgraph_api/
 
+# Exception : la fixture de démo EST versionnée (elle alimente la démo en
+# ligne). Données synthétiques uniquement — voir demo/export_fixture.py.
+!demo/demo_fixture.json
+
 # ── Médias de démo (volumineux) ──────────────────────────────────────────
 # À héberger ailleurs (LinkedIn, YouTube) plutôt que dans le dépôt.
 demo/*.mp4

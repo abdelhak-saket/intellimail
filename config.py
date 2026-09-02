@@ -6,8 +6,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Azure OpenAI
-    AZURE_OPENAI_ENDPOINT: str
-    AZURE_OPENAI_API_KEY: str
+    # Valeurs par défaut vides — volontaire : l'écran HITL et la démo publique
+    # doivent démarrer sans identifiants (ils ne font aucun appel LLM). Un appel
+    # au pipeline sans ces variables échouera explicitement dans llm.py.
+    AZURE_OPENAI_ENDPOINT: str = ""
+    AZURE_OPENAI_API_KEY: str = ""
     AZURE_OPENAI_API_VERSION: str = "2024-08-01-preview"
 
     # Deployments (par agent)

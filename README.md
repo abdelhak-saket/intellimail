@@ -255,6 +255,43 @@ lit directement la base alimentée par `/v1/triage`. Trois onglets :
 Renseignez votre identifiant dans la barre latérale : il est journalisé avec
 chaque décision.
 
+### Optionnel — Publier une démo en ligne (Streamlit Community Cloud)
+
+L'écran HITL se déploie publiquement, gratuitement, sans backend ni clé Azure :
+il rejoue des cas figés, et **chaque visiteur reçoit sa propre copie de la
+file** — ses validations n'affectent personne.
+
+**1. Générer la fixture** (en local, une fois) :
+
+```powershell
+python main.py                              # terminal 1
+python seed_queue.py --reset --parallel 4   # terminal 2
+python demo/export_fixture.py               # capture l'état de la file
+git add demo/demo_fixture.json && git commit -m "Fixture de demo" && git push
+```
+
+Le script refuse d'exporter si un expéditeur absent du dataset s'est glissé
+dans la file — garde-fou contre la publication accidentelle de données réelles.
+
+**2. Déployer** sur [share.streamlit.io](https://share.streamlit.io) :
+connectez le dépôt, fichier principal `app_hitl.py`, puis dans *Advanced
+settings → Secrets* :
+
+```toml
+DEMO_MODE = "true"
+```
+
+Sans `DEMO_MODE`, l'app cherche une base locale et affichera une file vide.
+
+**Ce que la démo ne fait pas** : aucun appel LLM, donc aucun coût et aucun
+risque de voir votre quota Azure consommé par des visiteurs. Le pipeline
+complet reste en local.
+
+> Première mise en ligne un peu longue : le `requirements.txt` installe toute
+> la pile (LangGraph, ChromaDB) dont l'écran n'a pas besoin. Si la construction
+> échoue, réduisez-le à `streamlit`, `pydantic`, `pydantic-settings`,
+> `python-dotenv` sur une branche dédiée au déploiement.
+
 ### Optionnel — LangGraph Studio (visualisation du graphe)
 
 ```powershell

@@ -27,6 +27,23 @@ from typing import Any, Dict, List, Optional
 
 DB_PATH = Path(__file__).parent / "hitl_queue.db"
 
+# Chemin de base surchargeable, par THREAD et non globalement : en mode démo
+# publique, chaque visiteur travaille sur sa propre copie. Streamlit exécute
+# chaque session dans son propre thread, donc un `threading.local` isole les
+# visiteurs sans qu'ils se marchent dessus. Une simple variable globale ferait
+# fuiter la base d'un visiteur vers un autre.
+_tls = threading.local()
+
+
+def set_db_path(path) -> None:
+    """Fixe la base à utiliser pour ce thread (mode démo)."""
+    _tls.db_path = Path(path)
+
+
+def current_db_path() -> Path:
+    """Base effective : surcharge de session si présente, sinon la base locale."""
+    return getattr(_tls, "db_path", None) or DB_PATH
+
 STATUS_PENDING = "pending"
 STATUS_VALIDATED = "validated"    # brouillon approuvé, en attente d'envoi
 STATUS_EDITED = "edited"          # brouillon corrigé, en attente d'envoi
@@ -84,7 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_decisions_queue ON decisions(queue_id);
 
 @contextmanager
 def _conn():
-    con = sqlite3.connect(DB_PATH, timeout=10)
+    con = sqlite3.connect(current_db_path(), timeout=10)
     con.row_factory = sqlite3.Row
     try:
         yield con

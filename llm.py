@@ -13,6 +13,11 @@ _client: Optional[AzureOpenAI] = None
 def get_client() -> AzureOpenAI:
     """Singleton AzureOpenAI client."""
     global _client
+    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_API_KEY:
+        raise RuntimeError(
+            "AZURE_OPENAI_ENDPOINT et AZURE_OPENAI_API_KEY ne sont pas "
+            "renseignés dans .env — le pipeline ne peut pas appeler le modèle. "
+            "(Normal en mode démo : l'écran HITL n'en a pas besoin.)")
     if _client is None:
         _client = AzureOpenAI(
             api_key=settings.AZURE_OPENAI_API_KEY,
