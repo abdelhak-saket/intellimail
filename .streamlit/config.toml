@@ -1,0 +1,15 @@
+# Thème IntelliMail — palette sobre banque/assurance.
+# Bleu nuit pour le texte, bleu franc en accent, fond gris très clair pour
+# faire ressortir les cartes blanches sur les captures.
+[theme]
+primaryColor = "#1F6FEB"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F6FC"
+textColor = "#0F2B46"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[server]
+runOnSave = true

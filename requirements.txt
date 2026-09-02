@@ -1,0 +1,52 @@
+# ── Application ───────────────────────────────────────────────────────────
+fastapi>=0.119.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.2
+pydantic-settings>=2.5.2
+python-dotenv>=1.0.1
+openai>=1.54.0
+httpx>=0.27.2
+
+# ── RAG (Bloc 2) — corpus ChromaDB pour le researcher ──────────────────────
+# Indispensable : sans lui, node_researcher retourne 0 contexte (mode dégradé).
+# Après installation : python ingest_corpus.py
+chromadb>=0.5.0
+
+# ── UI de validation humaine (Phase 3) — streamlit run app_hitl.py ─────────
+# app_hitl.py n'utilise NI st.dataframe NI st.bar_chart : ces deux fonctions
+# importent pandas, dont la DLL native (_libs.internals) est bloquée par le
+# contrôle d'application Windows sur certains postes. Tableaux et histogrammes
+# sont rendus en Markdown / st.progress. Ne pas réintroduire pandas ici.
+streamlit>=1.38.0
+
+# ── Observabilité — tracing des runs (benchmark) ───────────────────────────
+# BORNE HAUTE OBLIGATOIRE : langsmith >= 0.7.0 dépend de `xxhash`, une extension
+# C dont la DLL est bloquée par le contrôle d'application Windows (Smart App
+# Control / WDAC) -> "ImportError: DLL load failed while importing _xxhash" au
+# démarrage, qui casse tout l'import de langchain_core.
+# langchain-core 1.4.8 exige langsmith>=0.3.45,<1.0.0 : la borne <0.7 est
+# compatible. Ne pas désépingler sans revérifier sur un poste Windows.
+langsmith>=0.3.45,<0.7
+
+# ── Stack LangGraph : ENSEMBLE COHÉRENT VÉRIFIÉ (Python 3.11+) ─────────────
+# CAUSE DE LA PANNE PRÉCÉDENTE :
+#   l'ancien pin `langgraph<0.3.0` bloquait `langgraph-api` en 0.2.1, alors que
+#   `langgraph-cli[inmem]` laissait `langgraph-runtime-inmem` (sans borne haute)
+#   grimper en 0.14.1. Le runtime récent fait `from langgraph_api import
+#   feature_flags`, absent de l'api 0.2.1  ->  ImportError au démarrage de
+#   `langgraph dev`. L'incompatibilité n'est PAS exprimée dans les métadonnées
+#   (le runtime ne déclare aucune version d'api), donc pip ne peut pas la voir.
+#
+# CORRECTIF : on épingle api + runtime + cli + langgraph à une génération unique
+#   et cohérente. api 0.10.0 fournit bien feature_flags/graph/_checkpointer
+#   qu'attend runtime-inmem 0.30.0. Ne pas désépingler sans revérifier la paire.
+langgraph==1.2.6
+langgraph-checkpoint==4.1.1
+langgraph-prebuilt==1.1.0
+langgraph-sdk==0.4.2
+langchain-core==1.4.8
+
+# Serveur de dev local (commande `langgraph dev` + LangGraph Studio)
+langgraph-cli[inmem]==0.4.30
+langgraph-api==0.10.0
+langgraph-runtime-inmem==0.30.0

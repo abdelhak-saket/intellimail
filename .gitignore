@@ -1,0 +1,42 @@
+# ── Secrets — ne JAMAIS committer ────────────────────────────────────────
+.env
+*.key
+*.pem
+
+# ── Environnement Python ─────────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ── Données générées à l'exécution ───────────────────────────────────────
+# Contiennent des données clients (même synthétiques) et n'ont pas à être
+# versionnées : elles se régénèrent avec ingest_corpus.py et le benchmark.
+chroma_db/
+hitl_queue.db
+hitl_queue.db-journal
+metrics/
+runtime_config.json
+.langgraph_api/
+
+# ── Médias de démo (volumineux) ──────────────────────────────────────────
+# À héberger ailleurs (LinkedIn, YouTube) plutôt que dans le dépôt.
+demo/*.mp4
+demo/*.gif
+
+# ── Documents personnels présents dans le dossier de travail ─────────────
+Certifications_*
+CV_*
+*.docx
+
+# ── Notes internes (ne pas publier) ──────────────────────────────────────
+RESTE_A_FAIRE.md
+
+# ── OS / IDE ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+_backup_avant_upgrade/
