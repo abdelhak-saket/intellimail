@@ -636,10 +636,16 @@ with st.expander("🧪 **Testez votre propre e-mail** — voyez ce que le systè
                         "voulu en cas de panne, mais aucun brouillon n'a pu "
                         "être rédigé.\n\n**Détail :**\n\n"
                         + "\n\n".join(f"- `{e[:400]}`" for e in res["errors"]))
+                    emp = {}
                     if any("401" in e or "Authentication" in e
                            for e in res["errors"]):
                         import llm as _llm
-                        emp = _llm.empreinte_identifiants()
+                        # getattr : si le module déployé est d'une version
+                        # antérieure, on n'affiche pas le diagnostic plutôt que
+                        # de faire planter toute la page.
+                        _emp = getattr(_llm, "empreinte_identifiants", None)
+                        emp = _emp() if _emp else {}
+                    if emp:
                         st.warning(
                             "**Diagnostic des identifiants** (aucune donnée "
                             "sensible n'est affichée) — comparez ces valeurs "
