@@ -12,4 +12,11 @@ font = "sans serif"
 toolbarMode = "minimal"
 
 [server]
-runOnSave = true
+# PAS de runOnSave ni de surveillance de fichiers : sur Streamlit Community
+# Cloud, le surveillant tente d'observer tout le dépôt (corpus, dataset,
+# templates) et sature la limite d'instances inotify du conteneur —
+# « OSError: [Errno 24] inotify instance limit reached » en boucle dans les
+# journaux. Le redéploiement se fait de toute façon au push Git.
+# En local, utilisez le bouton « Rerun » de l'interface, ou lancez avec
+# --server.fileWatcherType=auto le temps d'une session de développement.
+fileWatcherType = "none"
