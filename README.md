@@ -1,5 +1,10 @@
 # IntelliMail Triage Backend
 
+**Démonstration en ligne : [intellimail-demo.streamlit.app](https://intellimail-demo.streamlit.app/)**
+— file de validation humaine avec des cas réels du jeu de test, et un bac à
+sable pour soumettre votre propre e-mail et voir ce que le système en ferait.
+Données synthétiques, aucun client réel.
+
 POC de triage d'e-mails clients (banque/assurance) : un e-mail entre, un pipeline
 multi-agent LangGraph l'analyse et ressort un brouillon de réponse accompagné d'une
 décision **AUTO** (envoi automatique), **HITL** (validation humaine) ou **MANUAL**
@@ -283,9 +288,44 @@ DEMO_MODE = "true"
 
 Sans `DEMO_MODE`, l'app cherche une base locale et affichera une file vide.
 
-**Ce que la démo ne fait pas** : aucun appel LLM, donc aucun coût et aucun
-risque de voir votre quota Azure consommé par des visiteurs. Le pipeline
-complet reste en local.
+**3. Optionnel — laisser les visiteurs tester leur propre e-mail**
+
+Le panneau « Testez votre propre e-mail » propose deux niveaux :
+
+- **Déterministe** — toujours actif, gratuit, instantané : masquage PII et
+  règles d'escalade, sans aucun appel modèle. C'est la démonstration du cœur
+  du projet, et elle ne peut rien coûter.
+- **Pipeline complet** — désactivé par défaut. Pour l'ouvrir, ajoutez aux
+  secrets :
+
+```toml
+DEMO_MODE = "true"
+LIVE_LLM_ENABLED = "true"
+AZURE_OPENAI_ENDPOINT = "https://<votre-ressource>.openai.azure.com"
+AZURE_OPENAI_API_KEY = "<votre-cle>"
+LIVE_MAX_PER_SESSION = "3"      # analyses par visiteur
+LIVE_MAX_PER_DAY = "200"        # plafond global journalier
+LIVE_MAX_BODY_CHARS = "2000"
+```
+
+⚠️ **Avant d'activer `LIVE_LLM_ENABLED`**, réglez un **plafond de jetons par
+minute (TPM) sur votre déploiement Azure OpenAI**. C'est le seul garde-fou qui
+ne dépend pas de ce code : si les quotas applicatifs sont contournés, il tient.
+Les protections applicatives (quota par session, plafond journalier, longueur
+maximale, interrupteur `LIVE_LLM_ENABLED`) viennent en complément, pas à la
+place.
+
+Ordre de grandeur : 200 analyses par jour représentent environ 0,26 $. Le
+risque n'est pas le coût unitaire mais le bouclage automatisé — d'où le
+plafond global partagé entre tous les visiteurs.
+
+**Sans `LIVE_LLM_ENABLED`** : aucun appel LLM possible depuis la démo, aucun
+coût, et la clé n'a pas besoin d'être dans les secrets.
+
+**Le RAG en ligne** : ChromaDB dépasse le gigaoctet de mémoire de Community
+Cloud. `rag.query()` retombe automatiquement sur une recherche par mots-clés
+dans `corpus/*.md` — moins fine, sans dépendance, et suffisante pour montrer
+que le rédacteur s'appuie sur des procédures internes.
 
 > Première mise en ligne un peu longue : le `requirements.txt` installe toute
 > la pile (LangGraph, ChromaDB) dont l'écran n'a pas besoin. Si la construction

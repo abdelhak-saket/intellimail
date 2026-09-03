@@ -28,6 +28,7 @@ from uuid import uuid4
 import streamlit as st
 
 import demo_mode
+import live_demo
 import rules
 import runtime_config
 import store
@@ -510,6 +511,127 @@ if case:
                                 f"{d['decided_at'][:16]} "
                                 f"{html.escape(d['comment'] or '')}",
                                 unsafe_allow_html=True)
+
+st.divider()
+
+# ─── Bac à sable : le visiteur soumet son propre e-mail ─────────────────
+with st.expander("🧪 **Testez votre propre e-mail** — voyez ce que le système "
+                 "en ferait", expanded=False):
+    live_actif = live_demo.actif()
+    used_jour, plafond_jour = live_demo.consommation_jour()
+    fait_session = st.session_state.get("live_count", 0)
+
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        exemple = st.selectbox("Partir d'un exemple",
+                               ["(vide)"] + list(live_demo.EXEMPLES))
+        if st.button("Charger l'exemple", use_container_width=True,
+                     disabled=exemple == "(vide)"):
+            f, s, b = live_demo.EXEMPLES[exemple]
+            st.session_state.update({"live_from": f, "live_subj": s, "live_body": b})
+            st.rerun()
+        if live_actif:
+            st.caption(f"Analyses complètes : {live_demo.max_par_session() - fait_session} "
+                       f"restantes pour vous · {plafond_jour - used_jour} "
+                       f"aujourd'hui tous visiteurs confondus")
+        else:
+            st.caption("Analyse déterministe uniquement (masquage et règles). "
+                       "Illimitée et instantanée.")
+
+    with c2:
+        e_from = st.text_input("Expéditeur", key="live_from",
+                               placeholder="prenom.nom@exemple.fr")
+        e_subj = st.text_input("Sujet", key="live_subj")
+    e_body = st.text_area("Corps de l'e-mail", key="live_body", height=160,
+                          placeholder="Écrivez ou collez un e-mail client…")
+
+    b1, b2 = st.columns(2)
+    lancer_det = b1.button("🛡️ Analyse déterministe (gratuite, instantanée)",
+                           use_container_width=True)
+    lancer_full = b2.button("🤖 Pipeline complet (appelle le modèle)",
+                            use_container_width=True, type="primary",
+                            disabled=not live_actif)
+
+    if lancer_det or lancer_full:
+        if not (e_body or "").strip():
+            st.warning("Écrivez un e-mail, ou chargez un exemple.")
+        else:
+            det = live_demo.analyse_deterministe(e_from, e_subj, e_body)
+            g1, g2 = st.columns(2)
+            g1.markdown("**Ce que le client a écrit**")
+            g1.text_area("brut", e_body, height=150, disabled=True,
+                         key="live_out_raw", label_visibility="collapsed")
+            g2.markdown("**Ce que le modèle verrait**")
+            g2.text_area("masqué", det["corps_masque"], height=150, disabled=True,
+                         key="live_out_masked", label_visibility="collapsed")
+            st.markdown(
+                ("🛡️ Masqué avant tout appel : "
+                 + " ".join(badge(f"{k} ×{v}", GREEN, soft=True)
+                            for k, v in det["pii"].items()))
+                if det["pii"] else
+                "🛡️ Aucune donnée personnelle détectée dans ce texte.",
+                unsafe_allow_html=True)
+
+            if det["degenere"]:
+                st.markdown(
+                    f'<div class="im-reason" style="--c:{GRAY}">'
+                    f'<div class="t">⬜ Entrée dégénérée</div><div class="w">'
+                    f'Corps trop court : escalade immédiate, <b>aucun appel au '
+                    f'modèle</b>. Coût zéro.</div></div>', unsafe_allow_html=True)
+            elif det["regles"]:
+                st.markdown("".join(
+                    f'<div class="im-reason" style="--c:{ORANGE}">'
+                    f'<div class="t">🟧 {html.escape(r["code"])}</div>'
+                    f'<div class="w">{html.escape(r["why"])}</div></div>'
+                    for r in det["regles"]), unsafe_allow_html=True)
+                st.caption("Ces règles suffisent à interdire l'envoi automatique, "
+                           "sans qu'aucun modèle n'ait été consulté.")
+            else:
+                st.info("Aucune règle d'entrée déclenchée. La décision dépendrait "
+                        "de la classification et de l'évaluation du brouillon.")
+
+    if lancer_full and (e_body or "").strip():
+        ok, motif = live_demo.verifier(e_body, fait_session)
+        if not ok:
+            st.warning(motif)
+        else:
+            with st.spinner("Classification, recherche documentaire, rédaction, "
+                            "évaluation…"):
+                try:
+                    res = live_demo.analyse_complete(e_from, e_subj, e_body)
+                except Exception as e:
+                    res = None
+                    st.error(f"Le pipeline a échoué : {type(e).__name__}: {e}")
+            if res:
+                st.session_state.live_count = fait_session + 1
+                col, fam, dot = reason_family(res["decision_reason"])
+                st.markdown(
+                    f'<div class="im-reason" style="--c:{col}">'
+                    f'<div class="t">{dot} Décision : {res["action"]} — '
+                    f'{html.escape(fam)}</div>'
+                    f'<div class="w">{html.escape(res["decision_why"] or "")}</div>'
+                    f'<div class="w"><code>{html.escape(res["decision_reason"])}'
+                    f'</code></div></div>', unsafe_allow_html=True)
+                st.markdown(
+                    badge(res["categorie"], NAVY) + " "
+                    + badge(f"priorité {res['priorite']}",
+                            PRIORITY_COLOR.get(res["priorite"], GRAY)) + " "
+                    + badge(f"confiance {res['confiance']:.2f}",
+                            GREEN if res["confiance"] >= .85 else ORANGE, soft=True)
+                    + " " + badge(f"judge {res['judge_verdict']}", VIOLET, soft=True),
+                    unsafe_allow_html=True)
+                st.markdown("**Brouillon proposé**")
+                st.text_area("draft", res["draft"] or "(aucun)", height=170,
+                             disabled=True, key="live_out_draft",
+                             label_visibility="collapsed")
+                if res["contexts"]:
+                    with st.expander(f"📚 Procédures utilisées ({len(res['contexts'])})"):
+                        for c in res["contexts"]:
+                            st.caption(c)
+                st.caption(f"⏱️ {res['duration_ms']} ms · 💰 {res['cost_usd']:.5f} $ · "
+                           f"{res['tokens_in']}+{res['tokens_out']} jetons")
+                if res["errors"]:
+                    st.caption("Incidents : " + " | ".join(res["errors"])[:300])
 
 st.divider()
 

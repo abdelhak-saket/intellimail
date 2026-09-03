@@ -1,6 +1,7 @@
 """Helper Azure OpenAI — un seul client réutilisé par tous les agents."""
 import json
-from typing import Optional
+import os
+from typing import Optional, Tuple
 
 from openai import AzureOpenAI
 
@@ -10,19 +11,38 @@ from config import settings
 _client: Optional[AzureOpenAI] = None
 
 
+def _identifiants() -> Tuple[str, str]:
+    """Endpoint et clé, lus AU MOMENT DE L'APPEL.
+
+    L'environnement a priorité sur `settings`, qui est figé à l'import : sur
+    Streamlit Community Cloud, les secrets sont injectés comme variables
+    d'environnement, parfois après la construction de Settings. Lire tardivement
+    évite un démarrage sans identifiants alors qu'ils sont bien présents.
+    """
+    return (os.getenv("AZURE_OPENAI_ENDPOINT") or settings.AZURE_OPENAI_ENDPOINT,
+            os.getenv("AZURE_OPENAI_API_KEY") or settings.AZURE_OPENAI_API_KEY)
+
+
+def identifiants_presents() -> bool:
+    """Le pipeline peut-il appeler le modèle ? (sans lever d'exception)"""
+    endpoint, cle = _identifiants()
+    return bool(endpoint and cle)
+
+
 def get_client() -> AzureOpenAI:
     """Singleton AzureOpenAI client."""
     global _client
-    if not settings.AZURE_OPENAI_ENDPOINT or not settings.AZURE_OPENAI_API_KEY:
+    endpoint, cle = _identifiants()
+    if not endpoint or not cle:
         raise RuntimeError(
             "AZURE_OPENAI_ENDPOINT et AZURE_OPENAI_API_KEY ne sont pas "
-            "renseignés dans .env — le pipeline ne peut pas appeler le modèle. "
-            "(Normal en mode démo : l'écran HITL n'en a pas besoin.)")
+            "renseignés — le pipeline ne peut pas appeler le modèle. "
+            "(Normal en mode démo sans clé : l'écran HITL n'en a pas besoin.)")
     if _client is None:
         _client = AzureOpenAI(
-            api_key=settings.AZURE_OPENAI_API_KEY,
+            api_key=cle,
             api_version=settings.AZURE_OPENAI_API_VERSION,
-            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+            azure_endpoint=endpoint,
         )
     return _client
 

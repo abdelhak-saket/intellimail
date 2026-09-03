@@ -61,7 +61,10 @@ MOA). Visuel : capture de la file HITL ou la vidéo de démo.
 > pas « quel modèle choisir ». C'est « qu'est-ce qui, dans mon système, ne
 > dépend d'aucun modèle ».
 >
-> Code et jeu de test : github.com/abdelhak-saket/intellimail
+> Vous pouvez l'essayer. Écrivez un e-mail avec un IBAN dedans, et regardez ce
+> qui en sort avant que le modèle ne le voie :
+> → Démo : intellimail-demo.streamlit.app
+> → Code et jeu de test : github.com/abdelhak-saket/intellimail
 >
 > #IA #BanqueAssurance #Automatisation #RelationClient
 
@@ -89,6 +92,7 @@ MOA). Visuel : capture de la file HITL ou la vidéo de démo.
 > automatique à tort, 0,0013 $ par e-mail. Jeu de test synthétique écrit par
 > mes soins — ça vaut pour les cas anticipés, pas pour les autres.
 >
+> Essayez avec votre propre e-mail : intellimail-demo.streamlit.app
 > Code : github.com/abdelhak-saket/intellimail
 
 ---
