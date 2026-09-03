@@ -240,8 +240,10 @@ with st.sidebar:
     if DEMO:
         st.markdown("### 🎭 Démonstration")
         if st.button("↺ Réinitialiser ma file", use_container_width=True,
-                     help="Restaure les cas d'origine. N'affecte que vous."):
+                     help="Restaure les cas d'origine et remet votre compteur "
+                          "d'analyses à zéro. N'affecte que vous."):
             demo_mode.reinitialiser(st.session_state.demo_sid)
+            st.session_state.live_count = 0
             st.rerun()
         st.caption("Code source : github.com/abdelhak-saket/intellimail")
         st.divider()
@@ -603,7 +605,13 @@ with st.expander("🧪 **Testez votre propre e-mail** — voyez ce que le systè
                     res = None
                     st.error(f"Le pipeline a échoué : {type(e).__name__}: {e}")
             if res:
-                st.session_state.live_count = fait_session + 1
+                # Une analyse qui n'a produit aucun brouillon (panne côté
+                # modèle) ne consomme pas le quota du visiteur : il n'a rien
+                # obtenu. Le plafond journalier, lui, reste décompté — des
+                # jetons ont pu être consommés avant l'échec.
+                echec_total = bool(res["errors"]) and not (res["draft"] or "").strip()
+                if not echec_total:
+                    st.session_state.live_count = fait_session + 1
                 col, fam, dot = reason_family(res["decision_reason"])
                 st.markdown(
                     f'<div class="im-reason" style="--c:{col}">'
@@ -620,6 +628,15 @@ with st.expander("🧪 **Testez votre propre e-mail** — voyez ce que le systè
                             GREEN if res["confiance"] >= .85 else ORANGE, soft=True)
                     + " " + badge(f"judge {res['judge_verdict']}", VIOLET, soft=True),
                     unsafe_allow_html=True)
+                if res["errors"]:
+                    st.error(
+                        "**Les appels au modèle ont échoué.** Le pipeline a "
+                        "appliqué son repli de sécurité (catégorie « autre », "
+                        "confiance 0, escalade humaine) — c'est le comportement "
+                        "voulu en cas de panne, mais aucun brouillon n'a pu "
+                        "être rédigé.\n\n**Détail :**\n\n"
+                        + "\n\n".join(f"- `{e[:400]}`" for e in res["errors"]))
+
                 st.markdown("**Brouillon proposé**")
                 st.text_area("draft", res["draft"] or "(aucun)", height=170,
                              disabled=True, key="live_out_draft",
