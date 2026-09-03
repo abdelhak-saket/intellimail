@@ -19,8 +19,35 @@ def _identifiants() -> Tuple[str, str]:
     d'environnement, parfois après la construction de Settings. Lire tardivement
     évite un démarrage sans identifiants alors qu'ils sont bien présents.
     """
-    return (os.getenv("AZURE_OPENAI_ENDPOINT") or settings.AZURE_OPENAI_ENDPOINT,
-            os.getenv("AZURE_OPENAI_API_KEY") or settings.AZURE_OPENAI_API_KEY)
+    endpoint = (os.getenv("AZURE_OPENAI_ENDPOINT")
+                or settings.AZURE_OPENAI_ENDPOINT or "")
+    cle = (os.getenv("AZURE_OPENAI_API_KEY")
+           or settings.AZURE_OPENAI_API_KEY or "")
+    # .strip() indispensable : un espace ou un retour à la ligne collé dans un
+    # champ de secrets (Streamlit, Key Vault, variable CI) produit un 401
+    # « invalid subscription key » alors que la valeur paraît correcte à l'œil.
+    return endpoint.strip().rstrip("/"), cle.strip()
+
+
+def empreinte_identifiants() -> dict:
+    """Empreinte non sensible des identifiants, pour diagnostiquer un 401 sans
+    exposer la clé : longueur, premiers et derniers caractères, présence
+    d'espaces. Une longueur inattendue trahit un caractère parasite."""
+    endpoint_brut = os.getenv("AZURE_OPENAI_ENDPOINT") or settings.AZURE_OPENAI_ENDPOINT or ""
+    cle_brute = os.getenv("AZURE_OPENAI_API_KEY") or settings.AZURE_OPENAI_API_KEY or ""
+    return {
+        "endpoint": endpoint_brut.strip(),
+        "endpoint_longueur": len(endpoint_brut),
+        "endpoint_espaces_parasites": endpoint_brut != endpoint_brut.strip(),
+        "cle_apercu": (f"{cle_brute.strip()[:4]}…{cle_brute.strip()[-4:]}"
+                       if len(cle_brute.strip()) >= 8 else "(absente)"),
+        "cle_longueur": len(cle_brute),
+        "cle_espaces_parasites": cle_brute != cle_brute.strip(),
+        "source": ("environnement" if os.getenv("AZURE_OPENAI_API_KEY")
+                   else "fichier .env"),
+        "deployment_classifier": settings.LLM_CLASSIFIER,
+        "api_version": settings.AZURE_OPENAI_API_VERSION,
+    }
 
 
 def identifiants_presents() -> bool:

@@ -636,6 +636,18 @@ with st.expander("🧪 **Testez votre propre e-mail** — voyez ce que le systè
                         "voulu en cas de panne, mais aucun brouillon n'a pu "
                         "être rédigé.\n\n**Détail :**\n\n"
                         + "\n\n".join(f"- `{e[:400]}`" for e in res["errors"]))
+                    if any("401" in e or "Authentication" in e
+                           for e in res["errors"]):
+                        import llm as _llm
+                        emp = _llm.empreinte_identifiants()
+                        st.warning(
+                            "**Diagnostic des identifiants** (aucune donnée "
+                            "sensible n'est affichée) — comparez ces valeurs "
+                            "avec celles qui fonctionnent en local :\n\n"
+                            + "\n".join(f"- {k} : `{v}`" for k, v in emp.items())
+                            + "\n\nUne longueur inattendue ou "
+                              "`espaces_parasites: True` signale un caractère "
+                              "invisible collé dans la valeur.")
 
                 st.markdown("**Brouillon proposé**")
                 st.text_area("draft", res["draft"] or "(aucun)", height=170,
